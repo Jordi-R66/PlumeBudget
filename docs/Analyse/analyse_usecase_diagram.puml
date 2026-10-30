@@ -1,0 +1,54 @@
+@startuml Diagramme de Cas d'Utilisation - PlumeBudget
+
+left to right direction
+'skinparam linetype ortho
+skinparam packageStyle rectangle
+'skinparam actorStyle hollow
+
+actor "Utilisateur\n(Membre de la famille)" as User
+actor "Espace Client Bancaire" as Bank <<Système Externe>>
+
+rectangle "PlumeBudget" as plumebudget {
+
+	package "1. Gestion des Comptes" {
+		usecase "Créer et gérer les comptes\n(Courant, Épargne, Liquidité)" as UC_Comptes
+		usecase "Saisir le solde initial" as UC_SoldeInit
+
+		UC_Comptes ..> UC_SoldeInit : <<include>>
+	}
+
+	package "2. Flux et Opérations" {
+		usecase "Saisir une dépense, un revenu\nou un virement" as UC_Saisie
+		usecase "Importer des transactions CSV" as UC_Import
+		usecase "Catégoriser les opérations" as UC_Cat
+		usecase "Planifier des opérations\n(Régulières ou Ponctuelles)" as UC_Plan
+
+		UC_Saisie <.. UC_Cat : <<extend>>
+		UC_Import <.. UC_Cat : <<extend>>
+	}
+
+	package "3. Budgétisation & Suivi" {
+		usecase "Allouer du budget par enveloppes\n(sorties, courses...)" as UC_Env
+		usecase "Consulter les soldes et\nles estimations (semaine, mois, an)" as UC_Soldes
+	}
+
+	package "4. Cartes et Plafonds" {
+		usecase "Paramétrer les plafonds\n(Carte Bleue, Retraits, Mode de calcul)" as UC_ParamPlafonds
+		usecase "Suivre l'état de consommation\ndes plafonds" as UC_SuiviPlafonds
+	}
+}
+
+' Liaisons Utilisateur
+User -d-> UC_Comptes
+User -d-> UC_Saisie
+User -d-> UC_Import
+User -d-> UC_Plan
+User -d-> UC_Env
+User -d-> UC_Soldes
+User -d-> UC_ParamPlafonds
+User -d-> UC_SuiviPlafonds
+
+' Liaisons Systèmes Externes
+UC_Import -d-> Bank
+
+@enduml
