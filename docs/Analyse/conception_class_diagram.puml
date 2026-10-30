@@ -1,0 +1,143 @@
+@startuml Diagramme de Conception - PlumeBudget (V2)
+
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 60
+'skinparam classAttributeIconSize 0
+
+package "fr.jordi_rocafort.plumebudget" {
+
+	package "model" {
+		abstract class Compte {
+			# id : int
+			# nom : String
+			# soldeInitial : double
+			# soldeActuel : double
+			+ getSolde() : double
+		}
+
+		class CompteBancaire extends Compte {
+			- iban : String
+			- rib : String
+			- bic : String
+		}
+
+		class CompteLiquidite extends Compte {}
+
+		abstract class Operation {
+			# id : int
+			# montant : double
+			# date : LocalDate
+			# frequence : FrequenceEnum
+			# moyenPaiement : TypeMoyenPaiement
+			# libelle : String
+		}
+
+		class Transaction extends Operation {
+			- sens : int // 1 ou -1
+		}
+
+		class Virement extends Operation {}
+
+		class Carte {
+			- id : int
+			- numero : String
+			- plafondPaiement : double
+			- plafondRetrait : double
+			- calculGlissant : boolean
+			+ isPlafondAtteint(montant : double) : boolean
+		}
+
+		class Enveloppe {
+			- nom : String
+			- budgetAlloue : double
+		}
+
+		class Categorie {
+			- nom : String
+		}
+
+		class RegleCategorisation {
+			- id : int
+			- motCle : String
+		}
+
+		Compte "1" *-- "0..*" Operation : operations
+		CompteBancaire "1" *-- "0..*" Carte : cartes
+		Transaction "*" -- "1" Categorie : categorie
+		Enveloppe "1" -- "1..*" Categorie : categories
+		RegleCategorisation "*" -- "1" Categorie : declenche >
+	}
+
+	package "dao" {
+		interface DAO<T> {
+			+ create(obj : T) : boolean
+			+ read(id : int) : T
+			+ update(obj : T) : boolean
+			+ delete(id : int) : boolean
+			+ findAll() : List<T>
+		}
+
+		class SQLiteConnection {
+			+ {static} getConnection() : Connection
+		}
+
+		class CompteDAO implements DAO {}
+		class OperationDAO implements DAO {}
+		class RegleCategorisationDAO implements DAO {}
+	}
+
+	package "service" {
+		interface CsvParserStrategy {
+			+ parser(chemin : Path) : List<Operation>
+		}
+
+		class ParserBanquePopulaire implements CsvParserStrategy {}
+		class ParserBoursorama implements CsvParserStrategy {}
+
+		class ImportCsvService {
+			+ synchroniserDonnees(chemin : Path, parser : CsvParserStrategy) : void
+		}
+
+		class CategorisationService {
+			+ autoCategoriser(operations : List<Operation>) : void
+		}
+
+		class PlafondService {
+			+ verifierJoursGlissants(carte : Carte, date : LocalDate) : double
+		}
+
+		ImportCsvService --> CsvParserStrategy
+		CategorisationService --> RegleCategorisationDAO
+	}
+
+	package "controller" {
+		class TransactionController {
+			+ validerSaisieTransaction(data : Map) : void
+			+ importerCSV(fichier : File, codeBanque : String) : void
+		}
+
+		class ParametresController {
+			+ ajouterRegleCategorisation(motCle : String, cat : Categorie) : void
+		}
+
+		TransactionController --> ImportCsvService
+		TransactionController --> CategorisationService
+	}
+
+	package "view" {
+		class ImportDialog {
+			- comboBanques : JComboBox
+			+ getFichierEtBanque() : Map
+		}
+
+		class ReglesCategorisationPanel {
+			+ rafraichirTableau() : void
+		}
+
+		ImportDialog --> TransactionController
+		ReglesCategorisationPanel --> ParametresController
+	}
+}
+
+@enduml

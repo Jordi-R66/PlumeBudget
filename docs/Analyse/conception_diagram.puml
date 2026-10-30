@@ -1,0 +1,42 @@
+@startuml Diagramme d'Architecture Globale - PlumeBudget
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 50
+
+package "1) Couche Présentation (Vues Swing)" {
+	[Vues (Fenêtres, Dialogues, Panels)] as Vues
+	[Thèmes (FlatLaf)] as FlatLaf
+	[Générateur de Graphiques (XChart)] as XChart
+
+	Vues ..> FlatLaf : <<utilise>>
+	Vues ..> XChart : <<intègre>>
+}
+
+package "2) Couche Contrôleurs" {
+	[ActionListeners & Gestionnaires d'événements] as Controllers
+}
+
+package "3) Couche Métier (Modèle)" {
+	[Services (Calcul plafonds, Import CSV, Budgets)] as Services
+	[Entités (Personne, Compte, Opération, Carte...)] as Entities
+}
+
+package "4) Couche Accès aux Données (DAO)" {
+	[Classes DAO (CRUD par entité)] as DAO
+	[Pilote JDBC SQLite] as JDBC
+}
+
+database "Fichier Local\n(plumebudget.db)" as SQLiteDB
+
+' Flux d'interactions
+Vues <--> Controllers : Saisie utilisateur / Rafraîchissement
+Controllers --> Services : Invoque la logique
+Services --> DAO : Demande la persistance/lecture
+Services ..> Entities : Manipule
+DAO ..> Entities : Instancie
+DAO --> JDBC : Exécute requêtes SQL
+JDBC <--> SQLiteDB : Lit / Écrit
+
+@enduml
