@@ -1,0 +1,152 @@
+@startuml Diagramme de classe d'analyse - PlumeBudget
+
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+' === REGROUPEMENT PAR PACKAGES LOGIQUES ===
+
+package "1) Acteurs et Tiers" {
+	abstract class "Personne" as P {}
+	class "Personne Physique" as PP {
+		Nom
+		Prénom
+	}
+
+	class "Personne Morale" as PM {
+		Raison Sociale
+		SIRET
+	}
+
+	class "Compte Externe" as C_E {
+		Intitulé
+		IBAN
+		RIB
+		BIC
+	}
+
+	PP -u-|> P
+	PM -u-|> P
+	P "*" -- "1..*" C_E : Possède >
+}
+
+package "2) Comptes (Internes)" {
+	abstract class "Compte" as C {
+		Solde Initial
+		Solde Actuel
+	}
+
+	class "Compte Liquidité" as CL {}
+	class "Compte Bancaire" as CB {
+		IBAN
+		RIB
+		BIC
+	}
+
+	class "Compte Épargne" as CE {}
+	class "Compte Courant" as CC {}
+
+	CL -u-|> C
+	CB -u-|> C
+	CE -u-|> CB
+	CC -u-|> CB
+}
+
+package "3) Cartes et Moyens de paiement" {
+	abstract class "Carte" as Card {
+		Plafond Paiement
+		Plafond Retrait
+		Mode Calcul (Glissant / Fixe)
+	}
+
+	class "Carte Débit" as CDeb {}
+	class "Carte Crédit" as CCred {}
+	class "Carte Retrait" as CRet {
+		Plafond Paiement = 0
+	}
+
+	CDeb -u-|> Card
+	CCred -u-|> Card
+	CRet -u-|> Card
+
+	enum "Type Moyen Paiement" as TMP {
+		CHÈQUE
+		CARTE
+		VIREMENT
+		PRÉLÈVEMENT
+		ESPÈCES
+	}
+}
+
+package "4) Opérations (Flux)" {
+	abstract class "Opération" as O {
+		Montant
+		Date
+		Fréquence (Ponctuelle / Intervalle)
+	}
+
+	class "Transaction" as T {
+		Sens
+	}
+
+	note left of T
+		Sens défini avec le 
+		signe du montant.
+		Négatif = Dépense
+		Positif = Revenu
+	end note
+
+	class "Virement" as V {}
+	class "Retrait" as R {}
+	class "Dépôt" as D {}
+
+	T -u-|> O
+	V -u-|> O
+	R -u-|> O
+	D -u-|> O
+}
+
+package "5) Budget" {
+	class "Catégorie" as Cat {}
+	class "Enveloppe" as Env {
+		Budget Alloué
+	}
+
+	Env "1" -- "1..*" Cat : Supervise >
+}
+
+' === LIAISONS INTER-PACKAGES ===
+
+' Comptes -> Opérations
+C "1" *-- "0..*" O : Contient >
+
+' Cartes -> Comptes Bancaires & Opérations
+CB "1" *-- "0..*" Card : Possède >
+O "*" -- "0..1" Card : Si moyen=CARTE >
+
+note on link
+	Contrainte : Si l'opération est une dépense,
+	la carte liée ne peut pas être "Carte Retrait"
+end note
+
+' Opérations -> Type de Paiement
+O "*" -- "1" TMP : Effectuée par >
+
+' Liaisons avec les Tiers
+T "*" -- "0..1" P : Émetteur / Bénéficiaire >
+V "*" -- "0..1" C_E : Vers / Depuis >
+V "*" -- "0..1" C : Compte destination >
+
+' Raccords Retrait/Dépôt
+R "*" -- "1" CB : Débite <
+R "*" -- "0..1" CL : Alimente >
+R "*" -- "0..1" P : Transmis à >
+
+D "*" -- "1" CB : Renfloue >
+D "*" -- "0..1" CL : Prélève <
+D "*" -- "0..1" P : Reçu de >
+
+' Opérations -> Budget
+T "*" -- "1" Cat : Classée dans >
+
+@enduml
